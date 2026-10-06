@@ -63,18 +63,36 @@ table { width: 100%; border-collapse: collapse; font-size: 0.92rem; }
 th, td { text-align: left; padding: 10px 8px; border-bottom: 1px solid var(--border); white-space: nowrap; }
 th { color: var(--muted); font-weight: 500; }
 td.num, th.num { text-align: right; }
+td.wrap { white-space: normal; min-width: 160px; }
 td.debit { color: var(--debit); }
 td.credit { color: var(--credit); }
 td small { color: var(--muted); }
 
+/* Phones: each row becomes a stacked card, labelled from data-label. */
+@media (max-width: 720px) {
+  .card { padding: 16px; }
+  table.stack thead { display: none; }
+  table.stack, table.stack tbody, table.stack tr, table.stack td { display: block; width: 100%; }
+  table.stack tr { border-bottom: 1px solid var(--border); padding: 8px 0; }
+  table.stack td {
+    display: flex; justify-content: space-between; gap: 16px; border: 0; padding: 4px 0;
+    white-space: normal; text-align: right; min-width: 0;
+  }
+  table.stack td.empty { display: none; }
+  table.stack td::before { content: attr(data-label); color: var(--muted); text-align: left; flex-shrink: 0; }
+  .balance h1 { font-size: 1.8rem; }
+}
+
 /* USSD simulator */
-.sim { display: grid; grid-template-columns: 1fr 300px; gap: 24px; align-items: start; }
+.sim { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 24px; align-items: start; }
 .sim-info { display: grid; gap: 12px; }
-@media (max-width: 720px) { .sim { grid-template-columns: 1fr; justify-items: center; } }
+@media (max-width: 720px) { .sim { grid-template-columns: minmax(0, 1fr); justify-items: center; } }
 
 .phone {
-  width: 280px; background: #1f2933; border-radius: 36px; padding: 18px 16px 22px;
-  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.25); display: grid; gap: 12px;
+  width: 100%; max-width: 300px; background: #1f2933; border-radius: 36px;
+  padding: 18px 16px 22px; box-shadow: 0 12px 30px rgba(0, 0, 0, 0.25);
+  /* minmax(0, 1fr) stops the inputs' intrinsic width from stretching the phone. */
+  display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px;
 }
 .speaker { width: 60px; height: 6px; background: #3e4c59; border-radius: 3px; justify-self: center; }
 .screen {
@@ -83,17 +101,17 @@ td small { color: var(--muted); }
 }
 .ussd-text { margin: 0; flex: 1; white-space: pre-wrap; font: inherit; font-size: 0.85rem; line-height: 1.35; }
 .dialer { display: grid; gap: 8px; margin: auto 0; text-align: center; }
-.dialer input { text-align: center; font-size: 1.4rem; font-family: inherit; background: transparent; border: none; }
+.dialer input { width: 100%; min-width: 0; text-align: center; font-size: 1.4rem; font-family: inherit; background: transparent; border: none; }
 .dialer small { font-size: 0.75rem; }
 .reply { display: flex; gap: 6px; align-items: center; }
-.reply input { flex: 1; padding: 6px 8px; font-family: inherit; background: #eef4ec; border-color: #9fb59a; }
+.reply input { flex: 1; min-width: 0; width: 100%; padding: 6px 8px; font-family: inherit; background: #eef4ec; border-color: #9fb59a; }
 .timer { font-size: 0.75rem; }
 .timer.warn { color: var(--error); font-weight: 700; }
 
 .softkeys { display: flex; gap: 8px; }
-.softkeys button { flex: 1; padding: 8px; }
+.softkeys button { flex: 1; min-width: 0; padding: 8px; }
 .softkeys .call { background: #2f9e44; }
-.keypad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.keypad { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
 .keypad button { background: #323f4b; padding: 10px 0; font-size: 1.05rem; }
 .keypad button:hover { background: #3e4c59; }
 .keypad .wide { grid-column: span 3; font-size: 0.85rem; }

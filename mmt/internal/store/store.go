@@ -83,6 +83,7 @@ type StatementLine struct {
 	Fee          money.Amount `json:"fee"`
 	Counterparty string       `json:"counterparty"`
 	Description  string       `json:"description"`
+	BalanceAfter money.Amount `json:"balanceAfter"` // wallet balance once this transaction (incl. fee) posted
 	CreatedAt    time.Time    `json:"createdAt"`
 }
 
@@ -254,10 +255,15 @@ func (s *Store) Statement(ctx context.Context, walletID int64, limit int) ([]Sta
 		       t.amount,
 		       CASE WHEN t.debit_wallet_id = $1 THEN t.fee ELSE 0 END,
 		       CASE WHEN t.debit_wallet_id = $1 THEN cw.name ELSE dw.name END,
-		       t.description, t.created_at
+		       t.description, le.balance_after, t.created_at
 		  FROM transactions t
 		  JOIN wallets dw ON dw.id = t.debit_wallet_id
 		  JOIN wallets cw ON cw.id = t.credit_wallet_id
+		  -- A fee adds a second entry for the payer; the last one holds the final balance.
+		  JOIN LATERAL (
+		        SELECT balance_after FROM ledger_entries
+		         WHERE transaction_id = t.id AND wallet_id = $1
+		         ORDER BY id DESC LIMIT 1) le ON true
 		 WHERE t.debit_wallet_id = $1 OR t.credit_wallet_id = $1
 		 ORDER BY t.created_at DESC, t.id DESC
 		 LIMIT $2`, walletID, limit)
@@ -269,7 +275,7 @@ func (s *Store) Statement(ctx context.Context, walletID int64, limit int) ([]Sta
 	for rows.Next() {
 		var l StatementLine
 		if err := rows.Scan(&l.Reference, &l.Type, &l.Channel, &l.Direction, &l.Amount, &l.Fee,
-			&l.Counterparty, &l.Description, &l.CreatedAt); err != nil {
+			&l.Counterparty, &l.Description, &l.BalanceAfter, &l.CreatedAt); err != nil {
 			return nil, err
 		}
 		out = append(out, l)

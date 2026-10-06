@@ -61,28 +61,38 @@ export default function Dashboard() {
         {txns.length === 0 ? (
           <p className="muted">No transactions yet. Dial *836# to get started.</p>
         ) : (
-          <table>
+          <table className="stack">
             <thead>
               <tr>
                 <th>Date</th>
                 <th>Type</th>
                 <th>Details</th>
                 <th>Ref</th>
-                <th className="num">Amount</th>
+                <th className="num">Debit</th>
+                <th className="num">Credit</th>
+                <th className="num">Balance</th>
               </tr>
             </thead>
             <tbody>
               {txns.map((t) => (
                 <tr key={t.reference}>
-                  <td>{new Date(t.createdAt).toLocaleString()}</td>
-                  <td>{typeLabels[t.type] || t.type}</td>
-                  <td>{t.direction === 'DEBIT' ? t.description : `From ${t.counterparty}`}</td>
-                  <td><code>{t.reference}</code></td>
-                  <td className={`num ${t.direction === 'DEBIT' ? 'debit' : 'credit'}`}>
-                    {t.direction === 'DEBIT' ? '-' : '+'}
-                    {formatMoney(t.amount, wallet.currency)}
-                    {t.fee > 0 && <small> (fee {formatMoney(t.fee, wallet.currency)})</small>}
+                  <td data-label="Date">{new Date(t.createdAt).toLocaleString()}</td>
+                  <td data-label="Type">{typeLabels[t.type] || t.type}</td>
+                  <td data-label="Details" className="wrap">{t.direction === 'DEBIT' ? t.description : `From ${t.counterparty}`}</td>
+                  <td data-label="Ref"><code>{t.reference}</code></td>
+                  {/* Debit includes the fee so Balance = previous balance − Debit + Credit. */}
+                  <td data-label="Debit" className={`num debit ${t.direction === 'DEBIT' ? '' : 'empty'}`}>
+                    {t.direction === 'DEBIT' && (
+                      <span>
+                        {formatMoney(t.amount + t.fee, wallet.currency)}
+                        {t.fee > 0 && <small><br />incl. fee {formatMoney(t.fee, wallet.currency)}</small>}
+                      </span>
+                    )}
                   </td>
+                  <td data-label="Credit" className={`num credit ${t.direction === 'CREDIT' ? '' : 'empty'}`}>
+                    {t.direction === 'CREDIT' && formatMoney(t.amount, wallet.currency)}
+                  </td>
+                  <td data-label="Balance" className="num">{formatMoney(t.balanceAfter, wallet.currency)}</td>
                 </tr>
               ))}
             </tbody>
