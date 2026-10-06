@@ -1,0 +1,74 @@
+name: mmt
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: mmt
+      POSTGRES_USER: mmt
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-mmt}
+    ports:
+      # Host port 5433 avoids clashing with a locally installed Postgres on 5432.
+      - "${POSTGRES_HOST_PORT:-5433}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mmt -d mmt"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  # Core service: login, sessions, USSD and transaction processing.
+  # Not published on the host: it is only reachable through the gateway.
+  mmt:
+    build: ./mmt
+    environment:
+      DATABASE_URL: postgres://mmt:${POSTGRES_PASSWORD:-mmt}@postgres:5432/mmt?sslmode=disable
+      REDIS_ADDR: redis:6379
+      GATEWAY_KEY: ${GATEWAY_KEY:-dev-gateway-key}
+      ADMIN_KEY: ${ADMIN_KEY:-dev-admin-key}
+      CURRENCY: ${CURRENCY:-USD}
+      COUNTRY_CODE: ${COUNTRY_CODE:-252}
+      USSD_SERVICE_CODE: "*836#"
+      USSD_SESSION_TTL: 30s
+      WEB_SESSION_TTL: 15m
+      MAX_PIN_ATTEMPTS: "3"
+      SEED_DEMO: ${SEED_DEMO:-false}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  gateway:
+    build: ./gateway
+    environment:
+      MMT_URL: http://mmt:8081
+      GATEWAY_KEY: ${GATEWAY_KEY:-dev-gateway-key}
+      ALLOWED_ORIGINS: http://localhost:3000,http://localhost:5173
+      TRUST_PROXY: "true"
+    ports:
+      - "8080:8080"
+    depends_on:
+      mmt:
+        condition: service_healthy
+
+  portal:
+    build: ./portal
+    ports:
+      - "3000:80"
+    depends_on:
+      - gateway
+
+volumes:
+  pgdata:
